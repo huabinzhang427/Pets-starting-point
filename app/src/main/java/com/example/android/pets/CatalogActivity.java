@@ -102,11 +102,17 @@ public class CatalogActivity extends AppCompatActivity {
           PetEntry.COLUMN_PET_WEIGHT
         };
 
-        Cursor cursor = db.query(
-                PetEntry.TABLE_NAME,
+//        Cursor cursor = db.query(
+//                PetEntry.TABLE_NAME,
+//                projection,
+//                null,
+//                null,
+//                null,
+//                null,
+//                null);
+
+        Cursor cursor = getContentResolver().query(PetEntry.CONTENT_URI,
                 projection,
-                null,
-                null,
                 null,
                 null,
                 null);
