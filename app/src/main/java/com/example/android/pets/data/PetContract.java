@@ -52,7 +52,20 @@ public final class PetContract {
 
         public final static int GENDER_FEMALE = 2;
 
+        /**
+         * Returns whether or not the given gender is {@link #GENDER_UNKNOWN}, {@link #GENDER_MALE},
+         * or {@link #GENDER_FEMALE}.
+         * */
+        public static boolean isValidGender(int gender) {
+            if (gender == GENDER_UNKNOWN || gender == GENDER_FEMALE || gender == GENDER_MALE) {
+                return true;
+            }
+            return false;
+        }
+
     }
+
+
 
 
 }
