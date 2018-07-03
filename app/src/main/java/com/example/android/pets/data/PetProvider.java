@@ -107,6 +107,13 @@ public class PetProvider extends ContentProvider{
             default:
                 throw  new IllegalArgumentException("Cannot query unkonwn URI " + uri);
         }
+
+        // Set notification URI on the Cursor
+        // so we konw what content URI the Cursor was created for.
+        // If the data at this URI changes, then we konw we need to update the Cursor.
+        // URI 的数据发生变化，我们就知道需要更新 Cursor
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
+
         return cursor;
     }
 
@@ -160,6 +167,10 @@ public class PetProvider extends ContentProvider{
             Log.e(LOG_TAG, "Failed to insert row for " + uri);
             return null;
         }
+
+        // Notify all listeners that the data has changed for the pet content URI
+        getContext().getContentResolver().notifyChange(uri, null);
+
         // return the new URI with the ID appended to the end of it
         return ContentUris.withAppendedId(uri, petId);
     }
