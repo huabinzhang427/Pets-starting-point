@@ -203,6 +203,7 @@ public class PetProvider extends ContentProvider{
      * Return the number of rows that were successfully updated.
      */
     private int updatePet(Uri uri, ContentValues contentValues, String selection, String[] selectionArgs) {
+        int updateCount = 0;
         // If there are no values to update, then don't try to update the database
         if (contentValues.size() == 0) {
             return 0;
@@ -240,7 +241,13 @@ public class PetProvider extends ContentProvider{
         // Otherwise, get writeable database to update the data
         SQLiteDatabase database = mDbHelper.getWritableDatabase();
         // Returns the number of database rows affected by the update statement
-        return database.update(PetEntry.TABLE_NAME, contentValues, selection, selectionArgs);
+        updateCount = database.update(PetEntry.TABLE_NAME, contentValues, selection, selectionArgs);
+
+        // notify all listeners of changes
+        if (updateCount > 0) {
+          getContext().getContentResolver().notifyChange(uri, null);
+        }
+        return updateCount;
     }
 
     /**
@@ -248,20 +255,31 @@ public class PetProvider extends ContentProvider{
      */
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
+        int deleteCount = 0;
         // Get writeable database
         SQLiteDatabase database = mDbHelper.getWritableDatabase();
         final int match = sUriMatcher.match(uri);
         switch (match) {
             case PETS:
                 // Delete all rows that match the selection and selection args
-                return database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                deleteCount = database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                deleteNotify(uri, deleteCount);
+                return deleteCount;
             case PET_ID:
                 // Delete a single row given by the ID in the URI
                 selection = PetEntry._ID + "=?";
                 selectionArgs = new String[] {String.valueOf(ContentUris.parseId(uri))};
-                return database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                deleteCount = database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+                deleteNotify(uri, deleteCount);
+                return deleteCount;
             default:
                 throw new IllegalArgumentException("Deletion is not support for " + uri);
+        }
+    }
+
+    private void deleteNotify(Uri uri, int deleteCOunt) {
+        if (deleteCOunt > 0) {
+            getContext().getContentResolver().notifyChange(uri, null);
         }
     }
 
