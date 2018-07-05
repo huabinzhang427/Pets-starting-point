@@ -39,7 +39,7 @@ SQLite 是一种数据库，使我们的应用和与之交互的设备上创建�
 ## SQL 语法
 
 在设置数据库表格前，我们都需要对需求进行分析，绘制出需要内容在 EXCEL 表格中，再来对照创建数据库表。比如
-![image](https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1530775585720&di=754e168d92f5ea983a795a7cd40dadd5&imgtype=jpg&src=http%3A%2F%2Fimg3.imgtn.bdimg.com%2Fit%2Fu%3D4288014583%2C1299116437%26fm%3D214%26gp%3D0.jpg?raw=true)
+![image](https://github.com/huabinzhang427/Pets-starting-point/blob/master/readme_imgs/20180625222126775.png)
 
 
 
