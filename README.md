@@ -39,8 +39,103 @@ SQLite 是一种数据库，使我们的应用和与之交互的设备上创建�
 ## SQL 语法
 
 在设置数据库表格前，我们都需要对需求进行分析，绘制出需要内容在 EXCEL 表格中，再来对照创建数据库表。比如
+
 ![image](https://github.com/huabinzhang427/Pets-starting-point/blob/master/readme_imgs/20180625222126775.png)
 
+### 创建表格
+
+```java
+CREATE TABLE <table_name> (<column_name_1> <data_type_1>, <column_name_2> <data_type_2>, ...);
+```
+
+注意，**SQLite 关键字都是大写**。在每个表格里都应该具有 ID 来唯一标识对象，因为对象的其它属性可能会有重复，导致混乱。
+
+### 查询表格
+
+`sqlite> .tables`，查询表格，系统返回表格名称
+
+`sqlite> .schema <table_name>`，返回创建该表格的语句
+
+`sqlite> PRAGMA TABLE_INFO(headphones);`，显示所有列名称和值类型
+
+### 删除表格
+
+`DROP TABLE <table_name>;`，慎重使用。
+
+
+以上图为例，SQL 语句如下
+
+```java
+sqlite> CREATE TABLE pets (_id INTEGER, name TEXT, breed TEXT, gender INTEGER, weight INTEGER);
+```
+创建好表格后，我们就可以开始向表格中添加行，并读取和操作其中的数据。
+
+添加：
+```java
+INSERT INFO <table_name> (<columns_name_1>, <columns_name_2>, ...) VALUES (<value_1>, <value_2>, ...);
+
+INSERT INTO pets (_id, name, breed, gender, weight) VALUES (1, "Tommy", "pomeranian", 1, 4);
+```
+查询：
+```java
+sqlite> .header on
+sqlite> .mode column
+
+SELECT <columns> FROM <table_name>
+// * 通配符，所有行和列
+SELECT * FROM pets;
+_id         name        breed       gender      weight    
+----------  ----------  ----------  ----------  ----------
+1           Tommy       pomeranian  1           4         
+2           Garfield    Tabby       2           8  
+1           Binx        Bombay      1           14
+```
+从输出内容可以看出，本来应该唯一的 ID，不再唯一。该怎么办？
+
+### SQL 关键字
+
+SQL 提供了便捷的关键字：`PRIMARY KEY`、`AUTOINCREMENT`、`NOT NULL`、`DEFAULT <value>`。
+
+```java
+sqlite> CREATE TABLE headphones (_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, price INTEGER, style INTEGER, in_stock INTEGER, description TEXT);
+```
+**PRIMARY KEY**：将相关列标为唯一标识的行，该属性通常与表示每个表格只能有一个主键。它可以确保唯一性。同时添加 **AUTO INCREMENT** 表示没有插入 ID 也会自动使其加1，无需指定数字。
+
+```java
+sqlite> INSERT INTO headphones (name, price, style, in_stock, description) VALUES ("DJ Bliss Red Headphones", 7198, 2, 1, "These awesome headphones will make you feel like a DJ");
+sqlite> INSERT INTO headphones (name, price, style, in_stock, description) VALUES ("CityRunner Active Wireless Headphones", 17198,3, 0, "On the go city dwellers will love these wireless headphones");
+
+sqlite> SELECT * FROM headphones;
+_id         name                     price       style       in_stock    description                                          
+----------  -----------------------  ----------  ----------  ----------  -----------------------------------------------------
+1           DJ Bliss Red Headphones  7198        2           1           These awesome headphones will make you feel like a DJ
+2           CityRunner Active Wirel  17198       3           0           On the go city dwellers will love these wireless head
+```
+在上面的设置下，如果再插入一条 ID 为 1 的数据，系统就会提示错误
+
+```java
+sqlite> INSERT INTO headphones (_id, name, price, style, in_stock, description) VALUES (1, "CityRunner Active Wireless Headphones", 17198,3, 0, "On the go city dwellers will love these wireless headphones");
+Error: UNIQUE constraint failed: headphones._id
+```
+**NOT NULL**：表示向表格中插入某个值时，必须具有相关的值，不能为空。
+**DEFAULT**：表示在没有给定值时会添加一个默认值。
+
+条件查询：
+
+```java
+// 选择
+SELECT FROM <table_name> WHERE 条件；
+// 排序
+SELECT * FROM <table_name> ORDER BY 列属性 ASC/DESC（升序/降序）
+```
+
+选择更新：
+
+```java
+// 条件使我们的指令更加具体，指定需要的
+UPDATE <table_name> SET 更新内容 条件；
+DELETE FROM <table_name>;
+```
 
 
 
