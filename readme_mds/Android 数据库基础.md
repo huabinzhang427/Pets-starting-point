@@ -63,7 +63,7 @@ CREATE TABLE <table_name> (<column_name_1> <data_type_1>, <column_name_2> <data_
 `DROP TABLE <table_name>;`，慎重使用。
 
 
-以上图为例，SQL 语句如下
+以上图为例，SQL 语句如下：
 
 ```java
 sqlite> CREATE TABLE pets (_id INTEGER, name TEXT, breed TEXT, gender INTEGER, weight INTEGER);
