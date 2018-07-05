@@ -1,232 +1,230 @@
-# Android 应用中使用数据库
+# CursorLoader 简介
 
-## 创建数据库
+> Loads data on a **background thread** because reading and writing to a database can be an expensive operation
 
-在 Android 代码中创建和修改 SQLite 数据库，我们可以参考 Android 文档 Save data using SQLite，我们在 Android 中需要采取两个基本步骤来设置 SQLite 就可以和数据库交互了。如下所示：
+* 在**后台线程加载数据**因为读取和写入数据库可能是一个很耗时的操作。
 
-1. Define a schema and contract-创建架构和契约类
-2. Create a database using an SQLOpenHelper-使用 SQLiteOpenHelper 创建数据库
+> Works well with ContentProvider because a Loader is **tied to a URI**
 
-完成上面两步后就可以执行创建、读取、更新和删除我们的数据的操作了。
+* 与 ContentProvider 很好的配合使用，因为加载器被**绑定在 URI 上**
 
-### 创建架构和契约类
+> When the underlying data changes, we can **automatically refresh the loader** to query the data source again with the same URI.
 
-创建数据库架构其实就是需要规划数据库结构。所以我们需要问两个问题：
+* 当底层数据发生更改时，我们可以**自动刷新加载器**，用相同的 URI 再次查询数据源。
 
-1. 表格的名称是什么？
-2. 表格里列的名称和数据类型是什么？
+# 使用 CursorLoader
 
-考虑好这两个问题后，我们就可以在 Excel 上规划数据库结构了，之后根据该结构创建表格。
+了解 CursorLoader 详细内容，可以参考链接内容
 
-#### 创建 Contract 类
+http://developer.android.youdaxue.com/guide/components/loaders?utm_source=udacity&utm_medium=course&utm_campaign=android_basics
 
-根据之前规划的数据库结构即我们定义的架构，我们在项目的主包下面创建一个包名为 data，然后在改包下创建一个新的 java 类名为 PetContract，将该类用 final 修饰，因为它只是用来提供常量，我们不需要扩展或为此外部类实现任何内容。使用我们定义的架构，为每个表格创建一个内部类，并为每个列标题创建常量，代码如下所示：
+http://developer.android.youdaxue.com/guide/topics/ui/layout/listview?utm_source=udacity&utm_medium=course&utm_campaign=android_basics
 
 ```java
-public final class PetContract {
-    private PetContract() {}
+public class CatalogActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>{
 
-    public static final class PetEntry implements BaseColumns {
+    // 加载器常量
+    private static final int PET_LOADER = 0;
 
-        public final static String TABLE_NAME = "pets";
+    PetCursorAdapter mCursorAdapter;
 
-        public final static String _ID = BaseColumn._ID;
-        public final static String COLUMN_PET_NAME = "name";
-        public final static String COLUMN_PET_BREED = "breed";
-        public final static String COLUMN_PET_GENDER = "gender";
-        public final static String COLUMN_PET_WEIGHT = "weight";
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_catalog);
 
-        public final static int GENDER_UNKONWN = 0;
-        public final static int GENDER_MALE = 1;
-        public final static int GENDER_FORMALE = 2;
+        // Setup FAB to open EditorActivity
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(CatalogActivity.this, EditorActivity.class);
+                startActivity(intent);
+            }
+        });
+
+
+        // Find the ListView which will be populated with the pet data
+        ListView petListView = (ListView) findViewById(R.id.list);
+
+        // Find and set empty view on the ListView, so that it only shows when the list has 0 items.
+        View emptyView = findViewById(R.id.empty_view);
+        petListView.setEmptyView(emptyView);
+
+        // Setup an Adapter to create a list item for each row of pet data in the Cursor
+        mCursorAdapter = new PetCursorAdapter(this, null);
+
+        // Attach the adapter to the ListView
+        petListView.setAdapter(mCursorAdapter);
+
+        petListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+                Intent intent = new Intent(CatalogActivity.this, EditorActivity.class);
+
+                Uri currentPetUri = ContentUris.withAppendedId(PetEntry.CONTENT_URI, id);
+                intent.setData(currentPetUri);
+                startActivity(intent);
+            }
+        });
+
+        // kick off the loader
+        getSupportLoaderManager().initLoader(PET_LOADER, null, this);
+    }
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu options from the res/menu/menu_catalog.xml file.
+        // This adds menu items to the app bar.
+        getMenuInflater().inflate(R.menu.menu_catalog, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // User clicked on a menu option in the app bar overflow menu
+        switch (item.getItemId()) {
+            // Respond to a click on the "Insert dummy data" menu option
+            case R.id.action_insert_dummy_data:
+                insertPet();
+                return true;
+            // Respond to a click on the "Delete all entries" menu option
+            case R.id.action_delete_all_entries:
+                eleteAllPets();
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void eleteAllPets() {
+        int rowDeleted = getContentResolver().delete(PetEntry.CONTENT_URI, null, null);
+        Log.v("CatalogActivity", rowDeleted + " rows deleted from pet database");
+    }
+
+    private void insertPet() {
+        // Create a ContentValues object where column names are the keys,
+        // and Toto's pet attributes are the values.
+        ContentValues values = new ContentValues();
+        values.put(PetEntry.COLUMN_PET_NAME, "Toto");
+        values.put(PetEntry.COLUMN_PET_BREED, "Terrier");
+        values.put(PetEntry.COLUMN_PET_GENDER, PetEntry.GENDER_MALE);
+        values.put(PetEntry.COLUMN_PET_WEIGHT, 7);
+
+        Uri petUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
+        if (petUri == null) {
+            Toast.makeText(this, getString(R.string.editor_insert_pet_failed),
+                    Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, getString(R.string.editor_insert_pet_successful),
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+
+        // 控制 projection 大小，提高应用性能
+        String[] projection = {
+                PetEntry._ID,
+                PetEntry.COLUMN_PET_NAME,
+                PetEntry.COLUMN_PET_BREED
+        };
+        // 这个加载器将在后台线程上执行 ContentProvider 的 query() 方法
+        return new CursorLoader(this,
+                PetEntry.CONTENT_URI,
+                projection,
+                null,
+                null,
+                null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        // Update with this new cursor containing updated pet data-更新
+        mCursorAdapter.swapCursor(data);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        // Callback called when the data needs to be deleted-删除
+        mCursorAdapter.swapCursor(null);
     }
 }
 ```
 
-#### 使用 SQLiteOpenHelper 创建数据库
+# CursorLoader 的自动加载
 
-在 dada 包中创建一个新的 PetDbHelper 类，该类继承自 `SQLiteOpenHelper` 类。我们需要重写 `onCreate()` 和 `onUpGrade()` 方法，并且为数据库名称和版本创建常量，同时别忘了创建该类的构造函数，还要为用来创建表格的 SQLite 指令创建一个字符串常量。
+为了避免无用的加载浪费资源，仅在 SQL 数据库中的某些数据发生变化时更新 Cursor。CursorLoader 主要解决的问题之一就是：我们想追踪数据是否已加载，如果已加载，则避免重复加载，除非有必要。
+
+只有当我们在**插入、更新或删除数据时触发 Cursor 进行更新**。而插入、更新或删除数据的具体操作是在 ContentProvider 中执行的，所以我们需要**在 ContentProvider 中进行设置**，当数据发生变化时，告诉 CursorLoader 需要重新加载数据的地方。
+
+在 Android 中存在一个机制能告诉 CursorLoader 与其关联的数据需要重新加载。因为**每个加载器与特定数据的 URI 关联**。URI 的作用是说明我们想要加载的数据是什么。Cursor 有一个属性称为 `Notification URI`，它指代某个特定数据点就像所有其它 URI 一样。一旦 **Cursor 设置为在 URI 发生变化时接收通知**。我们可以通过**对 URI 调用 notifyChange 方法发出 URI 数据发生了变化的信号**。
+
+在 Provider 代码中的设置：
 
 ```java
-/**
- * Database helper for Pets app. Manages database creation and version management.
- */
-public class PetDbHelper extends SQLiteOpenHelper {
+public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
+                        String sortOrder){
+...
+// Set notification URI on the Cursor
+// so we konw what content URI the Cursor was created for.
+// If the data at this URI changes, then we konw we need to update the Cursor.
+// 在 Cursor 上设置通知 URI，当 URI 的数据发生变化，我们就知道需要更新 Cursor
+cursor.setNotificationUri(getContext().getContentResolver(), uri);
+return cursor;
+}
 
-    public static final String LOG_TAG = PetDbHelper.class.getSimpleName();
+// 在 insert()、update() 和 delete() 方法中设置代码以使它们在 URI 发生变化时正确通知所有监听器
 
-    /** Name of the database file */
-    private static final String DATABASE_NAME = "shelter.db";
+insert(){
+...
+// Notify all listeners that the data has changed for the pet content URI
+getContext().getContentResolver().notifyChange(uri, null);
+...
+}
 
-    /**
-     * Database version. If you change the database schema, you must increment the database version.
-     */
-    private static final int DATABASE_VERSION = 1;
+update(){
+...
+// Returns the number of database rows affected by the update statement
+        updateCount = database.update(PetEntry.TABLE_NAME, contentValues, selection, selectionArgs);
 
-    /**
-     * Constructs a new instance of {@link PetDbHelper}.
-     *
-     * @param context of the app
-     */
-    public PetDbHelper(Context context) {
-        super(context, DATABASE_NAME, null, DATABASE_VERSION);
-    }
+        // notify all listeners of changes
+        if (updateCount > 0) {
+          getContext().getContentResolver().notifyChange(uri, null);
+        }
+        return updateCount;
+}
 
-    /**
-     * This is called when the database is created for the first time.
-     */
-    @Override
-    public void onCreate(SQLiteDatabase db) {
-        // Create a String that contains the SQL statement to create the pets table
-        String SQL_CREATE_PETS_TABLE =  "CREATE TABLE " + PetEntry.TABLE_NAME + " ("
-                + PetEntry._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + PetEntry.COLUMN_PET_NAME + " TEXT NOT NULL, "
-                + PetEntry.COLUMN_PET_BREED + " TEXT, "
-                + PetEntry.COLUMN_PET_GENDER + " INTEGER NOT NULL, "
-                + PetEntry.COLUMN_PET_WEIGHT + " INTEGER NOT NULL DEFAULT 0);";
-
-        // Execute the SQL statement
-        db.execSQL(SQL_CREATE_PETS_TABLE);
-    }
-
-    /**
-     * This is called when the database needs to be upgraded.
-     */
-    @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // The database is still at version 1, so there's nothing to do be done here.
-    }
+delete(){
+...
+deleteCount = database.delete(PetEntry.TABLE_NAME, selection, selectionArgs);
+if (deleteCOunt > 0) {
+            getContext().getContentResolver().notifyChange(uri, null);
+        }
 }
 ```
-## 连接数据库流程
 
-![image](https://github.com/huabinzhang427/Pets-starting-point/blob/master/readme_imgs/20180627163307878.png)
+![image](https://github.com/huabinzhang427/Pets-starting-point/blob/master/readme_imgs/20180704160242155.png)
 
-```java
-PetDbHelper mDbHelper = new PetDbHelper(this);
-SQLiteDatabase db = mDbHelper.getReadableDatabase();
-```
+分析过程：
 
-请求数据库，mDbHelper 将检查是否已经存在一个数据库？
+首先 CatalogActivity 实现一个 `LoaderManager.LoaderCallbacks<Cursor>` 接口，重写默认的回调方法。在 onCreate() 方法中使用 `initLoader()` 方法初始化查询。后台框架将调用 `onCreateLoader()` 回调方法以初始化我们的 `CursorLoader` 对象，过程中使用 `ContentResolver`，找到适合的 `Provider`，在 PetProvider 的 `query()` 方法中通过 `UriMatcher` 找到数据库中正确的数据并获得正确的 `Cursor`。接下来使用 `setNotificationUri()` 方法，告诉我们需要监视的 URI，当数据源发生变化时它就会知道需要更新 Cursor，并将 Cursor 返回至 CursorLoader。比如表中新插入了宠物，Uri 会的通知，并转而告诉 Cursor 发生了变化通知更新，更新后的 Cursor 会被回传到 Provider 再到 ContentResolver 最后到 CursorLoader 中重新加载新信息，重新加载后将使用新的 Cursor 调用 onLoadFInishes，且 UI 得到更新。而 onLoaderReset() 用来删除旧的 Cursor，换入新的数据。
 
-如果不存在，则 PetDbHelper 的实例将使用 onCreate() 方法创建一个数据库，接着创建 SQLiteDatabase 的实例对象返回给 Activity。
+setNotificationUri()：http://developer.android.youdaxue.com/reference/android/database/Cursor#setNotificationUri%28android.content.ContentResolver,%20android.net.Uri%29
 
-如果数据库已经存在，PetDbHelper 的实例将不会调用 onCreate() 方法，相反，将创建一个 SQLiteDatabase 的实例对象并关联现有的数据库，然后将该对象返回给请求数据库的 Activity。
+notifyChange()：https://www.grokkingandroid.com/android-tutorial-writing-your-own-content-provider/
 
-最终时帮助我们创建 SQLiteDatabase 对象与 shelter 数据库关联的 SQLiteDatabase 对象，之后我们就可以通过该对象向 shelter 数据库传达 SQLite 指令了。
 
-## 数据库对象及插入数据
 
-在 Android 文档 [Put information into a database](https://developer.android.com/training/data-storage/sqlite#WriteDbRow) 中，为我们举出了例子。
 
-```java
-// Gets the data repository in write mode
-SQLiteDatabase db = mDbHelper.getWritableDatabase();
 
-// Create a new map of values, where column names are the keys
-ContentValues values = new ContentValues();
-values.put(FeedEntry.COLUMN_NAME_TITLE, title);
-values.put(FeedEntry.COLUMN_NAME_SUBTITLE, subtitle);
 
-// Insert the new row, returning the primary key value of the new row
-long newRowId = db.insert(FeedEntry.TABLE_NAME, null, values);
-```
 
-ContentValues 中存储了大量的键值对，键是数据库中的列名称，值就是插入的值。注意 `insert()` 方法会返回新插入的 ID，如果出现错误它会返回 -1。
 
-## 数据库查询方法
 
-我们可以通过 db.rawquery() 方法来读取数据库，但不建议使用。就像存在 SQLiteDatabase.insert() 方法一样，我们可以使用 SQLiteDatabase.query() 方法来读取数据库，它会帮助我们构建查询，从而避免语法错误。我们看下 Android 文档来了解下：
 
-```java
-SQLiteDatabase db = mDbHelper.getReadableDatabase();
 
-// Define a projection that specifies which columns from the database
-// you will actually use after this query.
-String[] projection = {
-    BaseColumns._ID,
-    FeedEntry.COLUMN_NAME_TITLE,
-    FeedEntry.COLUMN_NAME_SUBTITLE
-    };
-
-// Filter results WHERE "title" = 'My Title'
-String selection = FeedEntry.COLUMN_NAME_TITLE + " = ?";
-String[] selectionArgs = { "My Title" };
-
-// How you want the results sorted in the resulting Cursor
-String sortOrder =
-    FeedEntry.COLUMN_NAME_SUBTITLE + " DESC";
-
-Cursor cursor = db.query(
-    FeedEntry.TABLE_NAME,   // The table to query
-    projection,             // The array of columns to return (pass null to get all)
-    selection,              // The columns for the WHERE clause
-    selectionArgs,          // The values for the WHERE clause
-    null,                   // don't group the rows
-    null,                   // don't filter by row groups
-    sortOrder               // The sort order
-    );
-    ```
-    
-观察上述代码，我们发现首先定义了一个字符串数组 `projection`，它其实是指我们想要获取的列名称，就像这样的语句：
-
-```java
-SELECT name, breed FROM pets;
-```
-定义 `projection` **使我们能够指定想要获取的具体列**，默认则获取所有列，类似于：
-
-```java
-SELECT * FROM pets;
-```
-
-`projection` **大小会影响到性能**。
-    
-调用 `query()` 方法，该方法具有大量输入参数，代表了 SELECT 语句的不同部分。第一个参数 `projection` 我们已经在上面介绍了，接下来 `selection` 和 `selectionArgs` 处理的是可选 WHERE 条件。例如根据 ID 选择单个宠物：
-
-```
-SELECT * FROM pets WHERE _id = 1;
-```
-使用 `selection` 和 `selectionArgs` 属性就是这样的：
-
-```java
-// Define 'where' part of query
-String selection = PetEntry._ID + "?";
-// Specify arguments in placeholder order
-String[] selectionArgs = {"1"}; 
-```
-`selection` 参数是 WHERE 关键字之后的类型为 String 的，这里使用 `?` 作为占位符，然后填充为 `selectionArgs` 参数中的值，它是一个字符串数组，负责替换这里 `selection` 中的问号，这里将其设为 1。
-
-为什么使用 `?` 号和 `selectionArgs` ，而不是直接写成 1 ？
-
-这里没有区别，我们可以将 `selectionArgs` 设为 null，将 `?` 号改为 1 。但是在某些情况下，选择内容可能来自表格，使用占位符是一种安全措施，可以**防止出现 SQL 注入攻击**，也就是用户不按套路出牌，编辑一些代码类内容输入，使我们的查询语句出现歧义错误。
-
-调用 `query()` 方法后会返回一个 Cursor 对象，它是一种可以捕获数据库中所有子集的对象。
-
-## 什么是 Cursor
-    
-简而言之，Cursor 是指 **代表数据库中多行内容的对象**。Cursor 包含了是我们能够访问和浏览 Cursor 对象的方法，如果 Cursor 包含多行的话就可以浏览各行。
-
-### Cursor.getCount()
-
-当我们第一次获取 Cursor 时，位置从 -1 开始，这是无效的位置，首个可用位置为0，然后逐步递增。
-
-### Cursor.moveToFirst
-
-该方法既将 Cursor 中的位置移动到结果中的第一行，这使我们能够访问第一条记录里的数据。
-
-### Cursor.moveToLast
-
-该方法会使我们跳到这里的最后一行。
-
-### Cursor.moveToPosition(int position)
-
-该方法会将 Cursor 位置移动到指定位置。
-
-上面方法返回的都是 Boolean 类型的值，这样可以帮助我们判断实际是否移动到了该位置。比如我们当前 Cursor 已经移动到了最后一行，再调用向下移动的方法就会返回 false。
-
-使用 `getColumnIndex(String columnName)`方法，来**根据名称来获取列的索引**。
-
-对于 Cursor 要注意的一个事项是，使用完毕后，一定要记得调用 `cursor.close()`，这样会完全清空 Cursor 使其无效。仅在完全操作完毕后调用该方法。不关闭 Cursor 的话，会因内存泄漏而降低性能。
 
 
 
