@@ -22,4 +22,28 @@ Android 数据库存储
 
 注意，在很多应用中会结合使用上面表格中的三种存储方式，比如相机应用，它会使用文件来将照片保存到本地，同时使用 SQLite 数据库来存储元数据（信息的信息，包括照片时间，地点，说明信息等）。更多详细 Android 数据存储介绍可查看官方文档 http://developer.android.youdaxue.com/guide/topics/data/data-storage?utm_source=udacity&utm_medium=course&utm_campaign=android_basics
 
+# SQLite
+
+SQLite 是一种数据库，使我们的应用和与之交互的设备上创建一个本地数据库。Lite 一词是指典型数据库的轻量级版本（lightweight version）。对应地就存在着重量级数据库，例如 MySQL，它可以提供更加复杂的功能。SQLite 不需要服务器，数据存储在设备的本地文本文件里。SQLite 是免费开源的，并且是 Android 自带的数据库这就是为什么需要学习这一特定类型的数据库。
+
+## SQL 数据值类型
+
+|pattern|description|
+|---|---|
+|NULL|null|
+|INTEGER|整型|
+|REAL|浮点型|
+|TEXT|字符型|
+|BLOB|按照输入的样式存储起来，比如图片、二进制数|
+
+## SQL 语法
+
+在设置数据库表格前，我们都需要对需求进行分析，绘制出需要内容在 EXCEL 表格中，再来对照创建数据库表。比如
+![image](https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1530775585720&di=754e168d92f5ea983a795a7cd40dadd5&imgtype=jpg&src=http%3A%2F%2Fimg3.imgtn.bdimg.com%2Fit%2Fu%3D4288014583%2C1299116437%26fm%3D214%26gp%3D0.jpg?raw=true)
+
+
+
+
+
+
 
